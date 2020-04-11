@@ -5,7 +5,7 @@
         <b-form-group
           id="input-group-2"
           label="Enter your account ID:"
-          label-for="input-2"
+          label-for="input"
         >
           <b-form-input
             id="input"
