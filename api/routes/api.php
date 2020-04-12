@@ -15,48 +15,44 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('accounts/{id}', function ($id) {
-    $account = DB::table('accounts')
-             ->where('id',$id)
-             ->get();
-
-    return $account;
+    return App\Account::where('id', $id)
+        ->with('country')->get();
 });
 
 Route::get('accounts/{id}/transactions', function ($id) {
-    $account = DB::table('transactions')
-             ->where('from', $id)
-             ->orWhere('to', $id)
-             ->get();
-
-    return $account;
+    return App\Transaction::where('from', $id)->orWhere('to', $id)->get();
 });
 
 Route::post('accounts/{id}/transactions', function (Request $request, $id) {
+    $validator = Validator::make(array_merge($request->all(), ['id' => $id]), [
+        'amount' => ['required', 'min:0', 'numeric'],
+        'id' => ['required', 'exists:accounts,id'],
+        'to' => ['required', 'exists:accounts,id'],
+        'details' => ['required']
+    ]);
+
+    if($validator->fails()) {
+        return response()->json($validator->messages(), 422);
+    }
+
     $to = $request->input('to');
     $amount = $request->input('amount');
     $details = $request->input('details');
-
-    $account = DB::table('accounts')
-             ->where('id',$id)
-             ->decrement('balance', $amount);
     
-    $account = DB::table('accounts')
-             ->where('id',$to)
-             ->increment('balance',$amount);
+    $to_account = App\Account::find($to);
+    $from_account = App\Account::find($id);
 
-    DB::table('transactions')->insert(
-        [
-            'from' => $id,
-            'to' => $to,
-            'amount' => $amount,
-            'details' => $details
-        ]
-    );
+    $to_account->deposit($amount);
+    $from_account->withdraw($amount);
+
+    $transaction = new App\Transaction();
+    $transaction->from = $id;
+    $transaction->to = $to;
+    $transaction->amount = $amount;
+    $transaction->details = $details;
+    $transaction->save();
 });
 
 Route::get('currencies', function () {
-    $account = DB::table('currencies')
-              ->get();
-
-    return $account;
+    return App\Currency::all();
 });

@@ -6,13 +6,15 @@
       <b-card :header="'Welcome, ' + account.name" class="mt-3">
         <b-card-text>
           <div>
+            Country: <code>{{ account.country.name }}</code>
+          </div>
+          <div>
             Account: <code>{{ account.id }}</code>
           </div>
           <div>
             Balance:
             <code
-              >{{ account.currency === "usd" ? "$" : "€"
-              }}{{ account.balance }}</code
+              >{{ currencySymbol }}{{ account.balance }}</code
             >
           </div>
         </b-card-text>
@@ -89,7 +91,8 @@ export default {
       account: null,
       transactions: null,
 
-      loading: true
+      loading: true,
+      currencySymbol: ''
     };
   },
 
@@ -137,6 +140,7 @@ export default {
         if (that.account && that.transactions) {
           that.loading = false;
         }
+        that.fetchCurrencyInfo();
       });
   },
 
@@ -194,6 +198,19 @@ export default {
             that.transactions = transactions;
           });
       }, 200);
+    },
+
+    fetchCurrencyInfo() {
+      var that = this;
+
+      axios.get(
+        `http://localhost:8000/api/currencies`
+      )
+      .then(function(response) {
+        that.currencySymbol = response.data.find(function(currency) {
+          return currency.id == that.account.country.currency_id
+        }).symbol
+      });
     }
   }
 };
