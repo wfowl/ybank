@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('accounts/{id}', function ($id) {
     $account = DB::table('accounts')
-             ->whereRaw("id=$id")
+             ->where('id',$id)
              ->get();
 
     return $account;
@@ -24,7 +24,8 @@ Route::get('accounts/{id}', function ($id) {
 
 Route::get('accounts/{id}/transactions', function ($id) {
     $account = DB::table('transactions')
-             ->whereRaw("`from`=$id OR `to`=$id")
+             ->where('from', $id)
+             ->orWhere('to', $id)
              ->get();
 
     return $account;
@@ -36,12 +37,12 @@ Route::post('accounts/{id}/transactions', function (Request $request, $id) {
     $details = $request->input('details');
 
     $account = DB::table('accounts')
-             ->whereRaw("id=$id")
-             ->update(['balance' => DB::raw('balance-' . $amount)]);
-
+             ->where('id',$id)
+             ->decrement('balance', $amount);
+    
     $account = DB::table('accounts')
-             ->whereRaw("id=$to")
-             ->update(['balance' => DB::raw('balance+' . $amount)]);
+             ->where('id',$to)
+             ->increment('balance',$amount);
 
     DB::table('transactions')->insert(
         [
