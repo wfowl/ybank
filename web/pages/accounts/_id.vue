@@ -162,78 +162,59 @@ export default {
         }/transactions`,
 
         this.payment
-      ).catch(function (error) {
-        let errors = [];
-        if(error.response.data.amount) {
-          error.response.data.amount.forEach(element => {
-            errors.push(element);
-          });
-        }
+      )
+      .then(() => {
+        this.errors = [];
 
-        if(error.response.data.to) {
-          error.response.data.to.forEach(element => {
-            errors.push(element);
-          });
-        }
+        this.payment = {};
+        this.show = false;
 
-        if(error.response.data.details) {
-          error.response.data.details.forEach(element => {
-            errors.push(element);
-          });
-        }
-        
-        if(error.response.data.id) {
-          error.response.data.id.forEach(element => {
-            errors.push(element);
-          });
-        }
-        
-        this.errors = errors
+        // update items
+        setTimeout(() => {
+          axios
+            .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
+            .then(function(response) {
+              if (!response.data.length) {
+                window.location = "/";
+              } else {
+                this.account = response.data[0];
+              }
+            }.bind(this));
 
-      }.bind(this))
-      this.payment = {};
-      this.show = false;
+          axios
+            .get(
+              `http://localhost:8000/api/accounts/${
+                this.$route.params.id
+              }/transactions`
+            )
+            .then(function(response) {
+              this["transactions"] = response.data;
 
-      // update items
-      setTimeout(() => {
-        axios
-          .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
-          .then(function(response) {
-            if (!response.data.length) {
-              window.location = "/";
-            } else {
-              this.account = response.data[0];
-            }
-          }.bind(this));
+              var transactions = [];
+              for (let i = 0; i < this.transactions.length; i++) {
+                this.transactions[i].amount =
+                  this.currencySymbol +
+                  this.transactions[i].amount;
 
-        axios
-          .get(
-            `http://localhost:8000/api/accounts/${
-              this.$route.params.id
-            }/transactions`
-          )
-          .then(function(response) {
-            this["transactions"] = response.data;
+                if (this.account.id != this.transactions[i].to) {
+                  this.transactions[i].amount = "-" + this.transactions[i].amount;
+                }
 
-            var transactions = [];
-            for (let i = 0; i < this.transactions.length; i++) {
-              this.transactions[i].amount =
-                this.currencySymbol +
-                this.transactions[i].amount;
-
-              if (this.account.id != this.transactions[i].to) {
-                this.transactions[i].amount = "-" + this.transactions[i].amount;
+                transactions.push(this.transactions[i]);
               }
 
-              transactions.push(this.transactions[i]);
-            }
-
-            this.transactions = transactions;
-          }.bind(this));
-      }, 200);
+              this.transactions = transactions;
+            }.bind(this));
+        }, 200);
+      })
+      .catch(function (error) {
+        for(let prop in error.response.data) {
+          error.response.data[prop].forEach(element=> {
+            this.errors.push(element);
+          })
+        }
+      }.bind(this))
       
-      
-
     },
 
     fetchCurrencyInfo() {
