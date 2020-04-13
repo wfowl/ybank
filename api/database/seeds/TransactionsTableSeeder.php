@@ -15,21 +15,20 @@ class TransactionsTableSeeder extends Seeder
             'from' => 1,
             'to' => 2,
             'details' => 'sample transaction',
-            'amount' => 14
+            'money_from' => 10,
+            'money_to' => 10,
+            'to_currency_id' => '1',
+            'from_currency_id' => '1'
         ]);
 
         DB::table('transactions')->insert([
             'from' => 1,
-            'to' => 2,
+            'to' => 3,
             'details' => 'sample transaction 2',
-            'amount' => 24
-        ]);
-
-        DB::table('transactions')->insert([
-            'from' => 2,
-            'to' => 1,
-            'details' => 'sample transaction 3',
-            'amount' => 15
+            'money_from' => 10,
+            'money_to' => 9.15,
+            'to_currency_id' => '2',
+            'from_currency_id' => '1'
         ]);
     }
 }

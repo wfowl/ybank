@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use GuzzleHttp\Client;
 
 /*
   |--------------------------------------------------------------------------
@@ -42,13 +43,40 @@ Route::post('accounts/{id}/transactions', function (Request $request, $id) {
     $to_account = App\Account::find($to);
     $from_account = App\Account::find($id);
 
-    $to_account->deposit($amount);
+    //Check if the user has enough money to transfer
+    if($from_account->balance < $amount) {
+        return response()->json(['amount' => ['You do not have enough money to transfer this amount.']], 422);
+    }
+
+    //Check if the recipient is different than sender
+    if($to_account->id == $from_account->id) {
+        return response()->json(['to' => ['You cannot send money to yourself.']], 422);
+    }
+
+    //calculate conversion rate
+    $guzzle = new Client();
+    $ext_request = $guzzle->request('GET', 'https://api.exchangeratesapi.io/latest', [
+        'query' => [
+            'base' => $from_account->country->currency->name
+        ]
+    ]);
+
+    //Pulling the conversion rate
+    $conversion_rate = json_decode($ext_request->getBody())->rates->{$to_account->country->currency->name};
+
+    //Determinining the amount to be transferred and rounding to the nearest hundredth
+    $amount_to_deposit = round($amount * $conversion_rate, 2);
+
+    $to_account->deposit($amount_to_deposit);
     $from_account->withdraw($amount);
 
     $transaction = new App\Transaction();
     $transaction->from = $id;
     $transaction->to = $to;
-    $transaction->amount = $amount;
+    $transaction->money_to = $amount_to_deposit;
+    $transaction->money_from = $amount;
+    $transaction->to_currency_id = $to_account->country->currency->id;
+    $transaction->from_currency_id = $from_account->country->currency->id;
     $transaction->details = $details;
     $transaction->save();
 });

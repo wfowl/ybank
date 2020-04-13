@@ -8,6 +8,6 @@ class Country extends Model
 {
     public function currency() 
     {
-        return $this->belongsTo('App\Currency')->get();
+        return $this->belongsTo('App\Currency');
     }
 }
