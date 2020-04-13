@@ -80,7 +80,7 @@
       </b-card>
 
       <b-card class="mt-3" header="Payment History">
-        <b-table striped hover :items="transactions"></b-table>
+        <b-table striped hover :items="transactions" :fields="transaction_fields"></b-table>
       </b-card>
     </div>
   </div>
@@ -102,7 +102,10 @@ export default {
       loading: true,
       currencySymbol: '',
 
-      errors: []
+      errors: [],
+      transaction_fields: [
+        'id', 'from', 'to', 'details', 'money_to', 'money_from'
+      ]
     };
   },
 
@@ -150,9 +153,26 @@ export default {
         this.currencySymbol = response.data.find(function(currency) {
           return currency.id == this.account.country.currency_id
         }.bind(this)).symbol
-        
+
         this.transactions.forEach(transaction => {
-            transaction.amount = this.currencySymbol + transaction.amount
+          this.currencySymbol = response.data.find(function(currency) {
+            return currency.id == this.account.country.currency_id;
+          }.bind(this)).symbol;
+
+          let toCurrencySymbol = response.data.find(function(currency) {
+            return currency.id == transaction.to_currency_id;
+          }.bind(this)).symbol;
+
+          let fromCurrencySymbol = response.data.find(function(currency) {
+            return currency.id == transaction.from_currency_id;
+          }.bind(this)).symbol;
+
+          transaction.money_from = fromCurrencySymbol + transaction.money_from;
+          transaction.money_to = toCurrencySymbol + transaction.money_to;
+
+          delete transaction.to_currency_id;
+          delete transaction.from_currency_id;
+          
         });
       }.bind(this));
     },
@@ -165,18 +185,7 @@ export default {
         }/transactions`
       )
       .then(function(response) {
-        this["transactions"] = response.data;
-
-        var transactions = [];
-        for (let i = 0; i < this.transactions.length; i++) {
-          if (this.account.id != this.transactions[i].to) {
-            this.transactions[i].amount = "-" + this.transactions[i].amount;
-          }
-
-          transactions.push(this.transactions[i]);
-        }
-
-        this.transactions = transactions;
+        this.transactions = response.data;
 
         if (this.account && this.transactions) {
           this.loading = false;

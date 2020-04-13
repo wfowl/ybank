@@ -26,7 +26,7 @@ Route::get('accounts/{id}/transactions', function ($id) {
 
 Route::post('accounts/{id}/transactions', function (Request $request, $id) {
     $validator = Validator::make(array_merge($request->all(), ['id' => $id]), [
-        'amount' => ['required', 'min:0', 'numeric'],
+        'amount' => ['required', 'min:1', 'numeric'],
         'id' => ['required', 'exists:accounts,id'],
         'to' => ['required', 'exists:accounts,id'],
         'details' => ['required']
@@ -55,14 +55,19 @@ Route::post('accounts/{id}/transactions', function (Request $request, $id) {
 
     //calculate conversion rate
     $guzzle = new Client();
-    $ext_request = $guzzle->request('GET', 'https://api.exchangeratesapi.io/latest', [
+    $conversion_request = $guzzle->request('GET', 'https://api.exchangeratesapi.io/latest', [
         'query' => [
             'base' => $from_account->country->currency->name
         ]
     ]);
 
-    //Pulling the conversion rate
-    $conversion_rate = json_decode($ext_request->getBody())->rates->{$to_account->country->currency->name};
+    if($to_account->country->currency->id != $from_account->country->currency->id) {
+        //Pulling the conversion rate
+        $conversion_rate = json_decode($conversion_request->getBody())->rates->{$to_account->country->currency->name};
+    } else {
+        $conversion_rate = 1;
+    }
+    
 
     //Determinining the amount to be transferred and rounding to the nearest hundredth
     $amount_to_deposit = round($amount * $conversion_rate, 2);
