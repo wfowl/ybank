@@ -32,6 +32,14 @@
         >
       </b-card>
 
+      <b-card class="mt-3" header="Errors" v-show="errors.length > 0">
+        <ul>
+          <li v-for="error in errors" style="color:red">
+            {{ error }}
+          </li>
+        </ul>
+      </b-card>
+
       <b-card class="mt-3" header="New Payment" v-show="show">
         <b-form @submit="onSubmit">
           <b-form-group id="input-group-1" label="To:" label-for="input-1">
@@ -92,62 +100,60 @@ export default {
       transactions: null,
 
       loading: true,
-      currencySymbol: ''
+      currencySymbol: '',
+
+      errors: []
     };
   },
 
   mounted() {
-    const that = this;
-
     axios
       .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
       .then(function(response) {
         if (!response.data.length) {
           window.location = "/";
         } else {
-          that.account = response.data[0];
+          this.account = response.data[0];
 
-          if (that.account && that.transactions) {
-            that.loading = false;
+          if (this.account && this.transactions) {
+            this.loading = false;
           }
         }
-      });
+      }.bind(this));
 
     axios
       .get(
         `http://localhost:8000/api/accounts/${
-          that.$route.params.id
+          this.$route.params.id
         }/transactions`
       )
       .then(function(response) {
-        that["transactions"] = response.data;
+        this["transactions"] = response.data;
 
         var transactions = [];
-        for (let i = 0; i < that.transactions.length; i++) {
-          that.transactions[i].amount =
-            (that.account.currency === "usd" ? "$" : "€") +
-            that.transactions[i].amount;
+        for (let i = 0; i < this.transactions.length; i++) {
+          this.transactions[i].amount =
+            this.currencySymbol +
+            this.transactions[i].amount;
 
-          if (that.account.id != that.transactions[i].to) {
-            that.transactions[i].amount = "-" + that.transactions[i].amount;
+          if (this.account.id != this.transactions[i].to) {
+            this.transactions[i].amount = "-" + this.transactions[i].amount;
           }
 
-          transactions.push(that.transactions[i]);
+          transactions.push(this.transactions[i]);
         }
 
-        that.transactions = transactions;
+        this.transactions = transactions;
 
-        if (that.account && that.transactions) {
-          that.loading = false;
+        if (this.account && this.transactions) {
+          this.loading = false;
         }
-        that.fetchCurrencyInfo();
-      });
+        this.fetchCurrencyInfo();
+      }.bind(this));
   },
 
   methods: {
     onSubmit(evt) {
-      var that = this;
-
       evt.preventDefault();
 
       axios.post(
@@ -156,10 +162,37 @@ export default {
         }/transactions`,
 
         this.payment
-      );
+      ).catch(function (error) {
+        let errors = [];
+        if(error.response.data.amount) {
+          error.response.data.amount.forEach(element => {
+            errors.push(element);
+          });
+        }
 
-      that.payment = {};
-      that.show = false;
+        if(error.response.data.to) {
+          error.response.data.to.forEach(element => {
+            errors.push(element);
+          });
+        }
+
+        if(error.response.data.details) {
+          error.response.data.details.forEach(element => {
+            errors.push(element);
+          });
+        }
+        
+        if(error.response.data.id) {
+          error.response.data.id.forEach(element => {
+            errors.push(element);
+          });
+        }
+        
+        this.errors = errors
+
+      }.bind(this))
+      this.payment = {};
+      this.show = false;
 
       // update items
       setTimeout(() => {
@@ -169,48 +202,49 @@ export default {
             if (!response.data.length) {
               window.location = "/";
             } else {
-              that.account = response.data[0];
+              this.account = response.data[0];
             }
-          });
+          }.bind(this));
 
         axios
           .get(
             `http://localhost:8000/api/accounts/${
-              that.$route.params.id
+              this.$route.params.id
             }/transactions`
           )
           .then(function(response) {
-            that["transactions"] = response.data;
+            this["transactions"] = response.data;
 
             var transactions = [];
-            for (let i = 0; i < that.transactions.length; i++) {
-              that.transactions[i].amount =
-                (that.account.currency === "usd" ? "$" : "€") +
-                that.transactions[i].amount;
+            for (let i = 0; i < this.transactions.length; i++) {
+              this.transactions[i].amount =
+                this.currencySymbol +
+                this.transactions[i].amount;
 
-              if (that.account.id != that.transactions[i].to) {
-                that.transactions[i].amount = "-" + that.transactions[i].amount;
+              if (this.account.id != this.transactions[i].to) {
+                this.transactions[i].amount = "-" + this.transactions[i].amount;
               }
 
-              transactions.push(that.transactions[i]);
+              transactions.push(this.transactions[i]);
             }
 
-            that.transactions = transactions;
-          });
+            this.transactions = transactions;
+          }.bind(this));
       }, 200);
+      
+      
+
     },
 
     fetchCurrencyInfo() {
-      var that = this;
-
       axios.get(
         `http://localhost:8000/api/currencies`
       )
       .then(function(response) {
-        that.currencySymbol = response.data.find(function(currency) {
-          return currency.id == that.account.country.currency_id
-        }).symbol
-      });
+        this.currencySymbol = response.data.find(function(currency) {
+          return currency.id == this.account.country.currency_id
+        }.bind(this)).symbol
+      }.bind(this));
     }
   }
 };
