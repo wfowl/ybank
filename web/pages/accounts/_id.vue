@@ -244,6 +244,10 @@ export default {
         this.currencySymbol = response.data.find(function(currency) {
           return currency.id == this.account.country.currency_id
         }.bind(this)).symbol
+
+        this.transactions.forEach(transaction => {
+          transaction.amount = this.currencySymbol + transaction.amount
+        });
       }.bind(this));
     }
   }
