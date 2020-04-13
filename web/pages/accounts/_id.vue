@@ -107,49 +107,7 @@ export default {
   },
 
   mounted() {
-    axios
-      .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
-      .then(function(response) {
-        if (!response.data.length) {
-          window.location = "/";
-        } else {
-          this.account = response.data[0];
-
-          if (this.account && this.transactions) {
-            this.loading = false;
-          }
-        }
-      }.bind(this));
-
-    axios
-      .get(
-        `http://localhost:8000/api/accounts/${
-          this.$route.params.id
-        }/transactions`
-      )
-      .then(function(response) {
-        this["transactions"] = response.data;
-
-        var transactions = [];
-        for (let i = 0; i < this.transactions.length; i++) {
-          this.transactions[i].amount =
-            this.currencySymbol +
-            this.transactions[i].amount;
-
-          if (this.account.id != this.transactions[i].to) {
-            this.transactions[i].amount = "-" + this.transactions[i].amount;
-          }
-
-          transactions.push(this.transactions[i]);
-        }
-
-        this.transactions = transactions;
-
-        if (this.account && this.transactions) {
-          this.loading = false;
-        }
-        this.fetchCurrencyInfo();
-      }.bind(this));
+    this.fetchAccountInfo();
   },
 
   methods: {
@@ -171,40 +129,7 @@ export default {
 
         // update items
         setTimeout(() => {
-          axios
-            .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
-            .then(function(response) {
-              if (!response.data.length) {
-                window.location = "/";
-              } else {
-                this.account = response.data[0];
-              }
-            }.bind(this));
-
-          axios
-            .get(
-              `http://localhost:8000/api/accounts/${
-                this.$route.params.id
-              }/transactions`
-            )
-            .then(function(response) {
-              this["transactions"] = response.data;
-
-              var transactions = [];
-              for (let i = 0; i < this.transactions.length; i++) {
-                this.transactions[i].amount =
-                  this.currencySymbol +
-                  this.transactions[i].amount;
-
-                if (this.account.id != this.transactions[i].to) {
-                  this.transactions[i].amount = "-" + this.transactions[i].amount;
-                }
-
-                transactions.push(this.transactions[i]);
-              }
-
-              this.transactions = transactions;
-            }.bind(this));
+          this.fetchAccountInfo();
         }, 200);
       })
       .catch(function (error) {
@@ -225,10 +150,56 @@ export default {
         this.currencySymbol = response.data.find(function(currency) {
           return currency.id == this.account.country.currency_id
         }.bind(this)).symbol
-
+        
         this.transactions.forEach(transaction => {
-          transaction.amount = this.currencySymbol + transaction.amount
+            transaction.amount = this.currencySymbol + transaction.amount
         });
+      }.bind(this));
+    },
+
+    fetchTransactions() {
+      axios
+      .get(
+        `http://localhost:8000/api/accounts/${
+          this.$route.params.id
+        }/transactions`
+      )
+      .then(function(response) {
+        this["transactions"] = response.data;
+
+        var transactions = [];
+        for (let i = 0; i < this.transactions.length; i++) {
+          if (this.account.id != this.transactions[i].to) {
+            this.transactions[i].amount = "-" + this.transactions[i].amount;
+          }
+
+          transactions.push(this.transactions[i]);
+        }
+
+        this.transactions = transactions;
+
+        if (this.account && this.transactions) {
+          this.loading = false;
+        }
+        this.fetchCurrencyInfo();
+      }.bind(this))
+    },
+
+    fetchAccountInfo() {
+      axios
+      .get(`http://localhost:8000/api/accounts/${this.$route.params.id}`)
+      .then(function(response) {
+        if (!response.data.length) {
+          window.location = "/";
+        } else {
+          this.account = response.data[0];
+
+          if (this.account && this.transactions) {
+            this.loading = false;
+          }
+        }
+
+        this.fetchTransactions();
       }.bind(this));
     }
   }
